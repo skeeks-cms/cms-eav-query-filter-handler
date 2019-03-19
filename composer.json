@@ -1,0 +1,34 @@
+{
+    "name": "skeeks/cms-eav-query-filter-handler",
+    "description": "Обработчик фильтров для SkeekS CMS",
+    "keywords": [
+        "module",
+        "cms",
+        "skeeks",
+        "sx",
+        "app",
+        "yii2",
+        "shop"
+    ],
+    "homepage": "http://www.skeeks.com/",
+    "type": "yii2-extension",
+    "license": "BSD-3-Clause",
+    "support": {
+        "issues": "https://cms.skeeks.com"
+    },
+    "authors": [
+        {
+            "name": "Semenov Alexander",
+            "email": "semenov@skeeks.com"
+        }
+    ],
+    "require": {
+        "skeeks/cms": "^5.0.4 || dev-master",
+        "skeeks/yii2-query-filter": "^0.0.2 || dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "skeeks\\cms\\eavqueryfilter\\": "src/"
+        }
+    }
+}

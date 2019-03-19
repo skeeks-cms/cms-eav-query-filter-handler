@@ -1,4 +1,4 @@
-Shop on SkeekS CMS
+SkeekS CMS
 ===================================
 
 Installation

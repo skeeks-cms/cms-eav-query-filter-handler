@@ -18,6 +18,7 @@ use yii\base\DynamicModel;
 use yii\base\InvalidConfigException;
 use yii\data\DataProviderInterface;
 use yii\db\ActiveQuery;
+use yii\db\Expression;
 use yii\db\QueryInterface;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
@@ -143,8 +144,17 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
         $query = clone $this->baseQuery;
         $query->with = [];
         $query->select(['cms_content_element.id as mainId', 'cms_content_element.id as id'])->indexBy('mainId');
-        $ids = $query->asArray()->all();
-        $this->elementIds = array_keys($ids);
+        /*$ids = $query->asArray()->all();
+        $this->elementIds = array_keys($ids);*/
+        $this->elementIds = [];
+        if ($ids = $query->column()) {
+            $ids = implode(",", $ids);
+            $this->elementIds = CmsContentElement::find()
+                ->andWhere(new Expression("id in ({$ids})"))
+                ->select(['id']);
+            //$this->elementIds = $ids;
+        }
+
 
         return $this;
     }
@@ -528,6 +538,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                     }
                 }
             }
+
             $activeQuery->andWhere(['in', $tableName.'.id', $unionQuery]);
         }
 

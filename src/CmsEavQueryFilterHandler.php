@@ -184,6 +184,189 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
 
     protected $_relatedOptions = [];
 
+
+    protected $_elementEnums = null;
+
+    protected function _getElementEnums($property_id = null)
+    {
+        if ($this->_elementEnums === null) {
+
+            $property_types = [];
+            if ($this->_rps) {
+                /**
+                 * @var $rp CmsContentProperty
+                 */
+                foreach ($this->_rps as $rp)
+                {
+                    if ($rp->property_type == PropertyType::CODE_ELEMENT) {
+                        $property_types[$rp->id] = $rp->id;
+                    }
+                }
+            }
+
+            $this->_elementEnums = [];
+
+            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
+            ])
+                ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_enum')
+                ->select(['e.id as key', 'e.name as value', 'map.value_enum', 'map.property_id'])
+                ->indexBy('key')
+                ->groupBy('key')
+                ->andWhere(['map.element_id' => $this->elementIds])
+                ->andWhere(['>', 'map.value_enum', 0])
+                ->andWhere(['>', 'e.id', 0])
+                ->andWhere(['is not', 'map.value_enum', null])
+                ->andWhere(['map.property_id' => $property_types])
+                ->asArray()
+                ->all();
+
+            if ($options) {
+                foreach ($options as $row) {
+                    $this->_elementEnums[$row['property_id']][$row['key']] = $row['value'];
+                }
+            }
+
+        }
+
+        if ($property_id) {
+            return ArrayHelper::getValue($this->_elementEnums, $property_id);
+        }
+
+        return $this->_elementEnums;
+    }
+
+
+    protected $_listEnums = null;
+
+    protected function _getListEnums($property_id = null)
+    {
+        if ($this->_listEnums === null) {
+
+            $property_types = [];
+            if ($this->_rps) {
+                /**
+                 * @var $rp CmsContentProperty
+                 */
+                foreach ($this->_rps as $rp)
+                {
+                    if ($rp->property_type == PropertyType::CODE_LIST) {
+                        $property_types[$rp->id] = $rp->id;
+                    }
+                }
+            }
+
+            $this->_listEnums = [];
+
+            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
+            ])
+                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
+                ->select(['enum.id as key', 'enum.value as value', 'map.value_enum', 'map.property_id'])
+                ->indexBy('key')
+                ->groupBy('key')
+                ->andWhere(['map.element_id' => $this->elementIds])
+                ->andWhere(['>', 'map.value_enum', 0])
+                ->andWhere(['>', 'enum.id', 0])
+                ->andWhere(['is not', 'map.value_enum', null])
+                ->andWhere(['map.property_id' => $property_types])
+                ->asArray()
+                ->all();
+
+            if ($options) {
+                foreach ($options as $row)
+                {
+                    $this->_listEnums[$row['property_id']][$row['key']] = $row['value'];
+                }
+            }
+
+        }
+
+        if ($property_id) {
+            return ArrayHelper::getValue($this->_listEnums, $property_id);
+        }
+
+        return $this->_listEnums;
+    }
+
+    protected $_rp_options = null;
+
+    protected function _getRpOptions($property_id = null)
+    {
+        if ($this->_rp_options === null) {
+
+            $property_types_elements = [];
+            $property_types_list = [];
+            $property_types = [];
+            if ($this->_rps) {
+                /**
+                 * @var $rp CmsContentProperty
+                 */
+                foreach ($this->_rps as $rp)
+                {
+                    if ($rp->property_type == PropertyType::CODE_LIST) {
+                        $property_types[$rp->id] = $rp->id;
+                        $property_types_list[$rp->id] = $rp->id;
+                    }
+
+                    if ($rp->property_type == PropertyType::CODE_ELEMENT) {
+                        $property_types[$rp->id] = $rp->id;
+                        $property_types_elements[$rp->id] = $rp->id;
+                    }
+                }
+            }
+
+            $this->_listEnums = [];
+
+            $property_types_list_string = "";
+            if ($property_types_list) {
+                $property_types_list_string = implode(",", $property_types_list);
+            }
+
+            $property_types_elements_string = "";
+            if ($property_types_elements) {
+                $property_types_elements_string = implode(",", $property_types_elements);
+            }
+
+            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
+            ])
+                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
+                ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_enum')
+                ->select([
+                    'map.value_enum as key',
+                    //'enum.value as value',
+                    new Expression("IF(map.property_id in ({$property_types_elements_string}), e.name, enum.value) as value"),
+                    'map.value_enum',
+                    'map.property_id'
+                ])
+                ->indexBy('key')
+                ->groupBy('key')
+                ->andWhere(['map.element_id' => $this->elementIds])
+                ->andWhere(['>', 'map.value_enum', 0])
+                //->andWhere(['>', 'enum.id', 0])
+                ->andWhere(['is not', 'map.value_enum', null])
+                ->andWhere(['map.property_id' => $property_types])
+                ->asArray()
+                ->all();
+
+            if ($options) {
+                foreach ($options as $row)
+                {
+                    $this->_rp_options[$row['property_id']][$row['key']] = $row['value'];
+                }
+            }
+
+        }
+
+        if ($property_id) {
+            return ArrayHelper::getValue($this->_rp_options, $property_id);
+        }
+
+        return $this->_rp_options;
+    }
+
+
     public function getOprionsByRp(CmsContentProperty $rp)
     {
         $options = [];
@@ -206,7 +389,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
         if ($rp->property_type == \skeeks\cms\relatedProperties\PropertyType::CODE_ELEMENT) {
             $propertyType = $rp->handler;
 
-            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+            /*$options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
                 ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_enum')
@@ -227,11 +410,14 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
 
             $options = \yii\helpers\ArrayHelper::map(
                 $options, 'key', 'value'
-            );
+            );*/
+
+            $options = $this->_getElementEnums($rp->id);
+            //$options = $this->_getRpOptions($rp->id);
 
         } elseif ($rp->property_type == \skeeks\cms\relatedProperties\PropertyType::CODE_LIST) {
 
-            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+            /*$options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
                 ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
@@ -245,30 +431,19 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum', null])
                 ->asArray()
-                ->all();
+                ->all();*/
 
 
-            /*$options =
-                CmsContentPropertyEnum::find()
-                    ->andWhere([CmsContentPropertyEnum::tableName() . '.id' => $this->elementIds])
-                    ->joinWith('property as p')
-                    ->joinWith('property.elementProperties as map')
-                    ->andWhere(['p.id' => $property->id])
-                    ->andWhere(['is not', 'map.value_enum', null])
-                    ->select([
-                        CmsContentPropertyEnum::tableName() . '.id',
-                        CmsContentPropertyEnum::tableName() . '.value',
-                        CmsContentPropertyEnum::tableName() . '.property_id'
-                    ])
-            ;*/
-
-            if (!$options) {
+            /*if (!$options) {
                 return [];
             }
 
             $options = \yii\helpers\ArrayHelper::map(
                 $options, 'key', 'value'
-            );
+            );*/
+
+            $options = $this->_getListEnums($rp->id);
+            //$options = $this->_getRpOptions($rp->id);
 
         } elseif ($rp->property_type == \skeeks\cms\relatedProperties\PropertyType::CODE_BOOL) {
             $availables = [];

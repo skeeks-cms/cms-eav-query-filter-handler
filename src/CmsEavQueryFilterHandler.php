@@ -143,15 +143,30 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
          */
         $query = clone $this->baseQuery;
         $query->with = [];
-        $query->select(['cms_content_element.id as mainId', 'cms_content_element.id as id'])->indexBy('mainId');
+        $query->select(['cms_content_element.id as id']);
+
         /*$ids = $query->asArray()->all();
         $this->elementIds = array_keys($ids);*/
         $this->elementIds = [];
         if ($ids = $query->column()) {
-            $ids = implode(",", $ids);
-            $this->elementIds = CmsContentElement::find()
-                ->andWhere(new Expression("id in ({$ids})"))
-                ->select(['id']);
+            if ($ids) {
+                $string_ids = implode(",", $ids);
+                $child_ids = CmsContentElement::find()->select(['id'])->where(new Expression("parent_content_element_id in ({$string_ids})"))->column();
+                if ($child_ids) {
+                    $ids = array_merge($ids, $child_ids);
+                }
+
+                $ids = implode(",", $ids);
+                $this->elementIds = CmsContentElement::find()
+                    ->andWhere(new Expression("id in ({$ids})"))
+                    ->select(['id']);
+
+            } else {
+                $this->elementIds = [];
+            }
+
+
+
             //$this->elementIds = $ids;
         }
 
@@ -714,7 +729,12 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 }
             }
 
-            $activeQuery->andWhere(['in', $tableName.'.id', $unionQuery]);
+            $activeQuery->joinWith("childrenContentElements as childrenContentElements");
+            $activeQuery->andWhere([
+                'or',
+                ['in', $tableName.'.id', $unionQuery],
+                ['in', 'childrenContentElements.id', $unionQuery],
+            ]);
         }
 
         return $this;

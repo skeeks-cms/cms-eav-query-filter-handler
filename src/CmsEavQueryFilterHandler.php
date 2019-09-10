@@ -233,6 +233,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->andWhere(['>', 'e.id', 0])
                 ->andWhere(['is not', 'map.value_enum', null])
                 ->andWhere(['map.property_id' => $property_types])
+                ->orderBy(['value' => SORT_ASC])
                 ->asArray()
                 ->all();
 
@@ -285,6 +286,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum', null])
                 ->andWhere(['map.property_id' => $property_types])
+                ->orderBy(['value' => SORT_ASC])
                 ->asArray()
                 ->all();
 

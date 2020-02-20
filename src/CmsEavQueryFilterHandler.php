@@ -43,6 +43,11 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
      */
     public $elementIds;
 
+    /**
+     * @var array 
+     */
+    public $openedPropertyIds = [];
+
 
     /**
      * @var CmsContentProperty[]

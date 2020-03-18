@@ -18,7 +18,9 @@ use yii\base\DynamicModel;
 use yii\base\InvalidConfigException;
 use yii\data\DataProviderInterface;
 use yii\db\ActiveQuery;
+use yii\db\Exception;
 use yii\db\Expression;
+use yii\db\Query;
 use yii\db\QueryInterface;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
@@ -44,7 +46,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
     public $elementIds;
 
     /**
-     * @var array 
+     * @var array
      */
     public $openedPropertyIds = [];
 
@@ -171,7 +173,6 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
             }
 
 
-
             //$this->elementIds = $ids;
         }
 
@@ -216,8 +217,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 /**
                  * @var $rp CmsContentProperty
                  */
-                foreach ($this->_rps as $rp)
-                {
+                foreach ($this->_rps as $rp) {
                     if ($rp->property_type == PropertyType::CODE_ELEMENT) {
                         $property_types[$rp->id] = $rp->id;
                     }
@@ -226,25 +226,68 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
 
             $this->_elementEnums = [];
 
-            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+            /*$options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
-                ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_enum')
-                ->select(['e.id as key', 'e.name as value', 'map.value_enum', 'map.property_id'])
+                ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_element_id')
+                ->select(['e.id as key', 'e.name as value', 'map.value_element_id', 'map.property_id'])
                 ->indexBy('key')
                 ->groupBy('key')
                 ->andWhere(['map.element_id' => $this->elementIds])
-                ->andWhere(['>', 'map.value_enum', 0])
+                ->andWhere(['>', 'map.value_element_id', 0])
                 ->andWhere(['>', 'e.id', 0])
-                ->andWhere(['is not', 'map.value_enum', null])
+                ->andWhere(['is not', 'map.value_element_id', null])
                 ->andWhere(['map.property_id' => $property_types])
                 ->orderBy(['value' => SORT_ASC])
                 ->asArray()
-                ->all();
+                ->all();*/
+
+            //print_R($options);die;
+            $options = (new Query())
+                ->select([
+                    'key'              => 'cce.id',
+                    'value_element_id' => 'ccep.value_element_id',
+                    'value'            => 'cce.name',
+                    'property_id'      => 'ccep.property_id',
+                    'total'      => new Expression("count(1)"),
+                ])
+                ->from([
+                    'cce' => CmsContentElement::tableName(),
+                ])
+                ->join("LEFT JOIN", ['ccep' => CmsContentElementProperty::tableName()], 'ccep.value_element_id = cce.id') // ["ccep.value_element_id" => new Expression('cce.id')]
+                ->join("LEFT JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                ->andWhere(['is not', 'ccep.value_element_id', null])
+                ->andWhere(['in', 'product.id', $this->elementIds])
+                ->andWhere(['in', 'ccep.property_id', $property_types])
+                ->groupBy(['cce.id'])
+                ->orderBy(['value' => SORT_ASC])
+                ->all()
+            ;
+            /*$elementIdsString = implode(",", $this->elementIds);
+            $result = \Yii::$app->db->createCommand(<<<SQL
+SELECT 
+    cce.id as 'key',
+    cce.name as value,
+    ccep.property_id as property_id,
+    ccep.value_element_id,
+    count(*) as total
+FROM 
+	`cms_content_element` as cce
+    LEFT JOIN `cms_content_element_property` ccep ON ccep.value_element_id = cce.id 
+    LEFT JOIN `cms_content_element` product ON product.id = ccep.element_id 
+WHERE 
+	ccep.value_element_id is not null AND
+    product.id in ({$elementIdsString})
+GROUP BY cce.id
+SQL
+            )->queryAll();*/
+
+
+            //print_r($options->createCommand()->rawSql);die;
 
             if ($options) {
                 foreach ($options as $row) {
-                    $this->_elementEnums[$row['property_id']][$row['key']] = $row['value'];
+                    $this->_elementEnums[$row['property_id']][$row['key']] = $row['value'] . " ({$row['total']})";
                 }
             }
 
@@ -269,8 +312,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 /**
                  * @var $rp CmsContentProperty
                  */
-                foreach ($this->_rps as $rp)
-                {
+                foreach ($this->_rps as $rp) {
                     if ($rp->property_type == PropertyType::CODE_LIST) {
                         $property_types[$rp->id] = $rp->id;
                     }
@@ -282,22 +324,21 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
             $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
-                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
-                ->select(['enum.id as key', 'enum.value as value', 'map.value_enum', 'map.property_id'])
+                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum_id')
+                ->select(['enum.id as key', 'enum.value as value', 'map.value_enum_id', 'map.property_id'])
                 ->indexBy('key')
                 ->groupBy('key')
                 ->andWhere(['map.element_id' => $this->elementIds])
-                ->andWhere(['>', 'map.value_enum', 0])
+                ->andWhere(['>', 'map.value_enum_id', 0])
                 ->andWhere(['>', 'enum.id', 0])
-                ->andWhere(['is not', 'map.value_enum', null])
+                ->andWhere(['is not', 'map.value_enum_id', null])
                 ->andWhere(['map.property_id' => $property_types])
                 ->orderBy(['value' => SORT_ASC])
                 ->asArray()
                 ->all();
 
             if ($options) {
-                foreach ($options as $row)
-                {
+                foreach ($options as $row) {
                     $this->_listEnums[$row['property_id']][$row['key']] = $row['value'];
                 }
             }
@@ -324,8 +365,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 /**
                  * @var $rp CmsContentProperty
                  */
-                foreach ($this->_rps as $rp)
-                {
+                foreach ($this->_rps as $rp) {
                     if ($rp->property_type == PropertyType::CODE_LIST) {
                         $property_types[$rp->id] = $rp->id;
                         $property_types_list[$rp->id] = $rp->id;
@@ -360,7 +400,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                     //'enum.value as value',
                     new Expression("IF(map.property_id in ({$property_types_elements_string}), e.name, enum.value) as value"),
                     'map.value_enum',
-                    'map.property_id'
+                    'map.property_id',
                 ])
                 ->indexBy('key')
                 ->groupBy('key')
@@ -373,8 +413,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->all();
 
             if ($options) {
-                foreach ($options as $row)
-                {
+                foreach ($options as $row) {
                     $this->_rp_options[$row['property_id']][$row['key']] = $row['value'];
                 }
             }

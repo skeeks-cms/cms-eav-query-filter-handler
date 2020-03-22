@@ -287,7 +287,8 @@ SQL
 
             if ($options) {
                 foreach ($options as $row) {
-                    $this->_elementEnums[$row['property_id']][$row['key']] = $row['value'] . " ({$row['total']})";
+                    //$this->_elementEnums[$row['property_id']][$row['key']] = $row['value'] . " ({$row['total']})";
+                    $this->_elementEnums[$row['property_id']][$row['key']] = $row['value'];
                 }
             }
 

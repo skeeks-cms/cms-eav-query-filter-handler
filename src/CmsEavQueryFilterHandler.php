@@ -776,15 +776,20 @@ SQL
                 }
             }
 
-            $activeQuery->joinWith("childrenContentElements as childrenContentElements");
-            $activeQuery->andWhere([
-                'or',
-                ['in', $tableName.'.id', $unionQuery],
-                ['in', 'childrenContentElements.id', $unionQuery],
-            ]);
+            $this->_applyToQuery($activeQuery, $unionQuery);
+
         }
 
         return $this;
+    }
+
+    protected function _applyToQuery(ActiveQuery $activeQuery, $unionQuery) {
+        $activeQuery->joinWith("childrenContentElements as childrenContentElements");
+        $activeQuery->andWhere([
+            'or',
+            ['in', CmsContentElement::tableName().'.id', $unionQuery],
+            ['in', 'childrenContentElements.id', $unionQuery],
+        ]);
     }
 
     /**

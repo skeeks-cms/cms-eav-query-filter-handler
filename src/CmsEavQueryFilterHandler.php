@@ -144,7 +144,6 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 $this->_rpInit($rp);
             }
         }
-
         /**
          * @var $query \yii\db\ActiveQuery
          */
@@ -243,26 +242,30 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->all();*/
 
             //print_R($options);die;
-            $options = (new Query())
+            $q = (new Query())
                 ->select([
                     'key'              => 'cce.id',
                     'value_element_id' => 'ccep.value_element_id',
                     'value'            => 'cce.name',
                     'property_id'      => 'ccep.property_id',
-                    'total'      => new Expression("count(1)"),
+                    //'total'      => new Expression("count(1)"),
                 ])
                 ->from([
                     'cce' => CmsContentElement::tableName(),
                 ])
-                ->join("LEFT JOIN", ['ccep' => CmsContentElementProperty::tableName()], 'ccep.value_element_id = cce.id') // ["ccep.value_element_id" => new Expression('cce.id')]
-                ->join("LEFT JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                ->join("INNER JOIN", ['ccep' => CmsContentElementProperty::tableName()], 'ccep.value_element_id = cce.id') // ["ccep.value_element_id" => new Expression('cce.id')]
+                ->join("INNER JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
                 ->andWhere(['is not', 'ccep.value_element_id', null])
                 ->andWhere(['in', 'product.id', $this->elementIds])
                 ->andWhere(['in', 'ccep.property_id', $property_types])
                 ->groupBy(['cce.id'])
                 ->orderBy(['value' => SORT_ASC])
-                ->all()
             ;
+            
+            //print_r($q->createCommand()->rawSql);die;
+            
+            $options = $q->all();
+            //print_r($options);die;
             /*$elementIdsString = implode(",", $this->elementIds);
             $result = \Yii::$app->db->createCommand(<<<SQL
 SELECT 
@@ -322,10 +325,10 @@ SQL
 
             $this->_listEnums = [];
 
-            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+            $q = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
-                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum_id')
+                ->innerJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum_id')
                 ->select(['enum.id as key', 'enum.value as value', 'map.value_enum_id', 'map.property_id'])
                 ->indexBy('key')
                 ->groupBy('key')
@@ -334,9 +337,15 @@ SQL
                 ->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum_id', null])
                 ->andWhere(['map.property_id' => $property_types])
-                ->orderBy(['value' => SORT_ASC])
+                ->orderBy(['value' => SORT_ASC]);
+            
+            //print_r($q->createCommand()->rawSql);die;
+            
+            $options = $q
                 ->asArray()
                 ->all();
+            
+            //print_r($options);die;
 
             if ($options) {
                 foreach ($options as $row) {
@@ -391,7 +400,7 @@ SQL
                 $property_types_elements_string = implode(",", $property_types_elements);
             }
 
-            $options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
+            $q = \skeeks\cms\models\CmsContentElementProperty::find()->from([
                 'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
             ])
                 ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
@@ -409,9 +418,13 @@ SQL
                 ->andWhere(['>', 'map.value_enum', 0])
                 //->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum', null])
-                ->andWhere(['map.property_id' => $property_types])
-                ->asArray()
+                ->andWhere(['map.property_id' => $property_types]);
+            
+            
+            $options = $q->asArray()
                 ->all();
+            
+            
 
             if ($options) {
                 foreach ($options as $row) {

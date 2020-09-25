@@ -367,11 +367,42 @@ SQL
 
             $this->_listEnums = [];
 
-            $q = \skeeks\cms\models\CmsContentElementProperty::find()->from([
-                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
-            ])
+            
+            $q = (new Query())
+                ->select([
+                    'key'              => 'ccep.value_enum_id',
+                    'value_enum_id' => 'ccep.value_enum_id',
+                    'value'            => 'enum.value',
+                    'property_id'      => 'ccep.property_id',
+                    //'total'      => new Expression("count(1)"),
+                ])
+                ->from([
+                    'ccep' => CmsContentElementProperty::tableName(),
+                ])
+                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName() . ".id", $this->elementIds])], 'product.id = ccep.element_id')
+                ->innerJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = ccep.value_enum_id')
+                
+                ->andWhere(['is not', 'ccep.value_enum_id', null])
+                ->andWhere(['>', 'ccep.value_enum_id', 0])
+                
+                ->andWhere(['in', 'ccep.property_id', $property_types])
+                
+                ->groupBy(['ccep.value_enum_id'])
+                ->orderBy(['value' => SORT_ASC])
+            ;
+                
+                
+            /*$q = \skeeks\cms\models\CmsContentElementProperty::find()
+                ->from([
+                    'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
+                ])
                 ->innerJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum_id')
-                ->select(['enum.id as key', 'enum.value as value', 'map.value_enum_id', 'map.property_id'])
+                ->select([
+                    'enum.id as key', 
+                    'enum.value as value', 
+                    'map.value_enum_id', 
+                    'map.property_id'
+                ])
                 ->indexBy('key')
                 ->groupBy('key')
                 ->andWhere(['map.element_id' => $this->elementIds])
@@ -379,12 +410,12 @@ SQL
                 ->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum_id', null])
                 ->andWhere(['map.property_id' => $property_types])
-                ->orderBy(['value' => SORT_ASC]);
+                ->orderBy(['value' => SORT_ASC]);*/
             
             //print_r($q->createCommand()->rawSql);die;
             
             $options = $q
-                ->asArray()
+                //->asArray()
                 ->all();
             
             //print_r($options);die;

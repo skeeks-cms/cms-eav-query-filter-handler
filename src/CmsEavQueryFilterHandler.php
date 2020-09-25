@@ -254,13 +254,55 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                     'cce' => CmsContentElement::tableName(),
                 ])
                 ->join("INNER JOIN", ['ccep' => CmsContentElementProperty::tableName()], 'ccep.value_element_id = cce.id') // ["ccep.value_element_id" => new Expression('cce.id')]
-                ->join("INNER JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                /*->join("INNER JOIN", [
+                    'ccep' => CmsContentElementProperty::find()
+                            ->select(['value_element_id', 'property_id', 'value_string', 'element_id'])
+                            ->where(['is not', CmsContentElementProperty::tableName() . '.value_element_id', null])
+                            ->andWhere(['in', CmsContentElementProperty::tableName() . '.property_id', $property_types])
+                ], 'ccep.value_element_id = cce.id')*/
+                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName() . ".id", $this->elementIds])], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
                 ->andWhere(['is not', 'ccep.value_element_id', null])
-                ->andWhere(['in', 'product.id', $this->elementIds])
                 ->andWhere(['in', 'ccep.property_id', $property_types])
                 ->groupBy(['cce.id'])
-                ->orderBy(['value' => SORT_ASC])
+                ->orderBy(['ccep.value_string' => SORT_ASC])
+
+                /*->join("INNER JOIN", [
+                    'ccep' => CmsContentElementProperty::find()
+                            ->select(['value_element_id', 'property_id', 'value_string'])
+                            ->where(['is not', CmsContentElementProperty::tableName() . '.value_element_id', null])
+                            ->andWhere(['in', CmsContentElementProperty::tableName() . '.element_id', $this->elementIds])
+                            ->andWhere(['in', CmsContentElementProperty::tableName() . '.property_id', $property_types])
+                ], 'ccep.value_element_id = cce.id')
+                ->groupBy(['cce.id'])
+                ->orderBy(['ccep.value_string' => SORT_ASC])*/
+
+                //->join("INNER JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                //->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName() . ".id", $this->elementIds])], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                //->andWhere(['is not', 'ccep.value_element_id', null])
+                //->andWhere(['in', 'ccep.property_id', $property_types])
+
             ;
+
+            /*$q = (new Query())
+                ->select([
+                    'key'              => 'cce.id',
+                    'value_element_id' => 'ccep.value_element_id',
+                    'value'            => 'cce.name',
+                    'property_id'      => 'ccep.property_id',
+                    //'total'      => new Expression("count(1)"),
+                ])
+                ->from([
+                    'ccep' => CmsContentElementProperty::tableName(),
+                ])
+                ->join("INNER JOIN", ['cce' => CmsContentElement::tableName()], 'ccep.value_element_id = cce.id') // ["ccep.value_element_id" => new Expression('cce.id')]
+                //->join("INNER JOIN", ['product' => CmsContentElement::tableName()], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                ->andWhere(['is not', 'ccep.value_element_id', null])
+                ->andWhere(['in', 'ccep.element_id', $this->elementIds])
+                //->andWhere(['in', 'product.id', $this->elementIds])
+                ->andWhere(['in', 'ccep.property_id', $property_types])
+                //->groupBy(['cce.id'])
+                ->orderBy(['ccep.value_string' => SORT_ASC])
+            ;*/
             
             //print_r($q->createCommand()->rawSql);die;
             

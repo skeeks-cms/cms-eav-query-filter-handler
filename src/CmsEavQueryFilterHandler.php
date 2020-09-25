@@ -18,7 +18,6 @@ use yii\base\DynamicModel;
 use yii\base\InvalidConfigException;
 use yii\data\DataProviderInterface;
 use yii\db\ActiveQuery;
-use yii\db\Exception;
 use yii\db\Expression;
 use yii\db\Query;
 use yii\db\QueryInterface;
@@ -260,7 +259,8 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                             ->where(['is not', CmsContentElementProperty::tableName() . '.value_element_id', null])
                             ->andWhere(['in', CmsContentElementProperty::tableName() . '.property_id', $property_types])
                 ], 'ccep.value_element_id = cce.id')*/
-                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName() . ".id", $this->elementIds])], 'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
+                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName().".id", $this->elementIds])],
+                    'product.id = ccep.element_id') //["product.id" => new Expression('ccep.element_id')]
                 ->andWhere(['is not', 'ccep.value_element_id', null])
                 ->andWhere(['in', 'ccep.property_id', $property_types])
                 ->groupBy(['cce.id'])
@@ -303,9 +303,9 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 //->groupBy(['cce.id'])
                 ->orderBy(['ccep.value_string' => SORT_ASC])
             ;*/
-            
+
             //print_r($q->createCommand()->rawSql);die;
-            
+
             $options = $q->all();
             //print_r($options);die;
             /*$elementIdsString = implode(",", $this->elementIds);
@@ -367,31 +367,27 @@ SQL
 
             $this->_listEnums = [];
 
-            
+
             $q = (new Query())
                 ->select([
-                    'key'              => 'ccep.value_enum_id',
+                    'key'           => 'ccep.value_enum_id',
                     'value_enum_id' => 'ccep.value_enum_id',
-                    'value'            => 'enum.value',
-                    'property_id'      => 'ccep.property_id',
+                    'value'         => 'enum.value',
+                    'property_id'   => 'ccep.property_id',
                     //'total'      => new Expression("count(1)"),
                 ])
                 ->from([
                     'ccep' => CmsContentElementProperty::tableName(),
                 ])
-                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName() . ".id", $this->elementIds])], 'product.id = ccep.element_id')
+                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName().".id", $this->elementIds])], 'product.id = ccep.element_id')
                 ->innerJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = ccep.value_enum_id')
-                
                 ->andWhere(['is not', 'ccep.value_enum_id', null])
                 ->andWhere(['>', 'ccep.value_enum_id', 0])
-                
                 ->andWhere(['in', 'ccep.property_id', $property_types])
-                
                 ->groupBy(['ccep.value_enum_id'])
-                ->orderBy(['value' => SORT_ASC])
-            ;
-                
-                
+                ->orderBy(['value' => SORT_ASC]);
+
+
             /*$q = \skeeks\cms\models\CmsContentElementProperty::find()
                 ->from([
                     'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
@@ -411,13 +407,13 @@ SQL
                 ->andWhere(['is not', 'map.value_enum_id', null])
                 ->andWhere(['map.property_id' => $property_types])
                 ->orderBy(['value' => SORT_ASC]);*/
-            
+
             //print_r($q->createCommand()->rawSql);die;
-            
+
             $options = $q
                 //->asArray()
                 ->all();
-            
+
             //print_r($options);die;
 
             if ($options) {
@@ -437,6 +433,11 @@ SQL
 
     protected $_rp_options = null;
 
+    /**
+     * @param null $property_id
+     * @return mixed|null
+     * @deprecated
+     */
     protected function _getRpOptions($property_id = null)
     {
         if ($this->_rp_options === null) {
@@ -492,12 +493,11 @@ SQL
                 //->andWhere(['>', 'enum.id', 0])
                 ->andWhere(['is not', 'map.value_enum', null])
                 ->andWhere(['map.property_id' => $property_types]);
-            
-            
+
+
             $options = $q->asArray()
                 ->all();
-            
-            
+
 
             if ($options) {
                 foreach ($options as $row) {
@@ -536,59 +536,10 @@ SQL
 
         if ($rp->property_type == \skeeks\cms\relatedProperties\PropertyType::CODE_ELEMENT) {
             $propertyType = $rp->handler;
-
-            /*$options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
-                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
-            ])
-                ->leftJoin(['e' => CmsContentElement::tableName()], 'e.id = map.value_enum')
-                ->select(['e.id as key', 'e.name as value', 'map.value_enum'])
-                ->indexBy('key')
-                ->groupBy('key')
-                ->andWhere(['map.element_id' => $this->elementIds])
-                ->andWhere(['map.property_id' => $rp->id])
-                ->andWhere(['>', 'map.value_enum', 0])
-                ->andWhere(['>', 'e.id', 0])
-                ->andWhere(['is not', 'map.value_enum', null])
-                ->asArray()
-                ->all();
-
-            if (!$options) {
-                return [];
-            }
-
-            $options = \yii\helpers\ArrayHelper::map(
-                $options, 'key', 'value'
-            );*/
-
             $options = $this->_getElementEnums($rp->id);
             //$options = $this->_getRpOptions($rp->id);
 
         } elseif ($rp->property_type == \skeeks\cms\relatedProperties\PropertyType::CODE_LIST) {
-
-            /*$options = \skeeks\cms\models\CmsContentElementProperty::find()->from([
-                'map' => \skeeks\cms\models\CmsContentElementProperty::tableName(),
-            ])
-                ->leftJoin(['enum' => CmsContentPropertyEnum::tableName()], 'enum.id = map.value_enum')
-                //->leftJoin(['p' => CmsContentProperty::tableName()], 'p.id = enum.property_id')
-                ->select(['enum.id as key', 'enum.value as value', 'map.value_enum'])
-                ->indexBy('key')
-                ->groupBy('key')
-                ->andWhere(['map.element_id' => $this->elementIds])
-                ->andWhere(['map.property_id' => $rp->id])
-                ->andWhere(['>', 'map.value_enum', 0])
-                ->andWhere(['>', 'enum.id', 0])
-                ->andWhere(['is not', 'map.value_enum', null])
-                ->asArray()
-                ->all();*/
-
-
-            /*if (!$options) {
-                return [];
-            }
-
-            $options = \yii\helpers\ArrayHelper::map(
-                $options, 'key', 'value'
-            );*/
 
             $options = $this->_getListEnums($rp->id);
             //$options = $this->_getRpOptions($rp->id);
@@ -636,6 +587,51 @@ SQL
     }
 
 
+    protected $_minMaxValues = null;
+
+    public function _getMinMaxValues($property_id = null)
+    {
+        if ($this->_minMaxValues === null) {
+
+            $property_types = [];
+            if ($this->_rps) {
+                /**
+                 * @var $rp CmsContentProperty
+                 */
+                foreach ($this->_rps as $rp) {
+                    if ($rp->property_type == PropertyType::CODE_NUMBER) {
+                        $property_types[$rp->id] = $rp->id;
+                    }
+                }
+            }
+
+            $this->_minMaxValues = [];
+
+            $q = (new Query())
+                ->select([
+                    'max'         => new Expression('MAX(ccep.value_enum)'),
+                    'min'         => new Expression('MIN(ccep.value_enum)'),
+                    'property_id'   => 'ccep.property_id',
+                    //'total'      => new Expression("count(1)"),
+                ])
+                ->from([
+                    'ccep' => CmsContentElementProperty::tableName(),
+                ])
+                ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName().".id", $this->elementIds])], 'product.id = ccep.element_id')
+                ->andWhere(['in', 'ccep.property_id', $property_types])
+                ->groupBy(['ccep.property_id'])
+            ;
+
+            $this->_minMaxValues = $q->indexBy('property_id')->all();
+        }
+
+        if ($property_id) {
+            return ArrayHelper::getValue($this->_minMaxValues, $property_id);
+        }
+
+        return $this->_minMaxValues;
+    }
+
     /**
      * @param $rp
      *
@@ -648,6 +644,10 @@ SQL
         if (!$this->enableCache) {
             $value = null;
         }*/
+        
+        if ($data = $this->_getMinMaxValues($rp->id)) {
+            return $data['max'];
+        }
 
         $value = 0;
         if (!$value) {
@@ -686,6 +686,10 @@ SQL
         if (!$this->enableCache) {
             $value = null;
         }*/
+        
+        if ($data = $this->_getMinMaxValues($rp->id)) {
+            return $data['min'];
+        }
 
         $value = 0;
         if (!$value) {
@@ -869,7 +873,8 @@ SQL
         return $this;
     }
 
-    protected function _applyToQuery(ActiveQuery $activeQuery, $unionQuery) {
+    protected function _applyToQuery(ActiveQuery $activeQuery, $unionQuery)
+    {
         $activeQuery->joinWith("childrenContentElements as childrenContentElements");
         $activeQuery->andWhere([
             'or',

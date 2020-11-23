@@ -24,7 +24,7 @@
     ],
     "require": {
         "skeeks/cms": "^5.0.4 || dev-master",
-        "skeeks/yii2-query-filter": "^0.0.2 || dev-master"
+        "skeeks/yii2-query-filter": "^1.0 || dev-master"
     },
     "autoload": {
         "psr-4": {

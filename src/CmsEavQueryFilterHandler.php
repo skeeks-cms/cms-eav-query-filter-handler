@@ -662,7 +662,9 @@ SQL
                     ->one();
 
 
-                $value = (float)$value['value_enum'];
+                if ($value && isset($value['value_enum'])) {
+                    $value = (float) $value['value_enum'];
+                }
                 /*$value = (float)$value['value_enum'];
 
                 if ($this->enableCache) {
@@ -703,7 +705,10 @@ SQL
                     ->limit(1)
                     ->one();
 
-                $value = (float)$value['value_enum'];
+                if ($value && isset($value['value_enum'])) {
+                    $value = (float) $value['value_enum'];
+                }
+                
 
                 /*if ($this->enableCache) {
                     \Yii::$app->cache->set($cacheKey, $value);

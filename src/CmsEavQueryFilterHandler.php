@@ -264,7 +264,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
                 ->andWhere(['is not', 'ccep.value_element_id', null])
                 ->andWhere(['in', 'ccep.property_id', $property_types])
                 ->groupBy(['cce.id'])
-                ->orderBy(['ccep.value_string' => SORT_ASC])
+                ->orderBy(['cce.name' => SORT_ASC])
 
                 /*->join("INNER JOIN", [
                     'ccep' => CmsContentElementProperty::find()
@@ -307,7 +307,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
             //print_r($q->createCommand()->rawSql);die;
 
             $options = $q->all();
-            //print_r($options);die;
+            /*print_r($options);die;*/
             /*$elementIdsString = implode(",", $this->elementIds);
             $result = \Yii::$app->db->createCommand(<<<SQL
 SELECT 
@@ -338,6 +338,8 @@ SQL
             }
 
         }
+
+                //print_r($this->_elementEnums);
 
         if ($property_id) {
             return ArrayHelper::getValue($this->_elementEnums, $property_id);

@@ -101,6 +101,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
     public function getRPQuery()
     {
         return \skeeks\cms\models\CmsContentProperty::find()
+            ->cmsSite()
             ->joinWith('cmsContentProperty2trees as map')
             ->joinWith('cmsContentProperty2contents as cmap')
             //->select([\skeeks\cms\models\CmsContentProperty::tableName().'.id', 'code'])

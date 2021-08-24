@@ -12,6 +12,7 @@ use skeeks\cms\models\CmsContentElement;
 use skeeks\cms\models\CmsContentElementProperty;
 use skeeks\cms\models\CmsContentProperty;
 use skeeks\cms\models\CmsContentPropertyEnum;
+use skeeks\cms\models\CmsSavedFilter;
 use skeeks\cms\relatedProperties\PropertyType;
 use skeeks\yii2\queryfilter\IQueryFilterHandler;
 use yii\base\DynamicModel;
@@ -25,6 +26,9 @@ use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 
 /**
+ *
+ * @property null|CmsSavedFilter $savedFilter;
+ *
  * @author Semenov Alexander <semenov@skeeks.com>
  */
 class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandler
@@ -340,7 +344,7 @@ SQL
 
         }
 
-                //print_r($this->_elementEnums);
+        //print_r($this->_elementEnums);
 
         if ($property_id) {
             return ArrayHelper::getValue($this->_elementEnums, $property_id);
@@ -614,7 +618,7 @@ SQL
                 ->select([
                     'max'         => new Expression('MAX(ccep.value_enum)'),
                     'min'         => new Expression('MIN(ccep.value_enum)'),
-                    'property_id'   => 'ccep.property_id',
+                    'property_id' => 'ccep.property_id',
                     //'total'      => new Expression("count(1)"),
                 ])
                 ->from([
@@ -622,8 +626,7 @@ SQL
                 ])
                 ->join("INNER JOIN", ['product' => CmsContentElement::find()->select(['id'])->where(['in', CmsContentElement::tableName().".id", $this->elementIds])], 'product.id = ccep.element_id')
                 ->andWhere(['in', 'ccep.property_id', $property_types])
-                ->groupBy(['ccep.property_id'])
-            ;
+                ->groupBy(['ccep.property_id']);
 
             $this->_minMaxValues = $q->indexBy('property_id')->all();
         }
@@ -647,7 +650,7 @@ SQL
         if (!$this->enableCache) {
             $value = null;
         }*/
-        
+
         if ($data = $this->_getMinMaxValues($rp->id)) {
             return $data['max'];
         }
@@ -666,7 +669,7 @@ SQL
 
 
                 if ($value && isset($value['value_enum'])) {
-                    $value = (float) $value['value_enum'];
+                    $value = (float)$value['value_enum'];
                 }
                 /*$value = (float)$value['value_enum'];
 
@@ -691,7 +694,7 @@ SQL
         if (!$this->enableCache) {
             $value = null;
         }*/
-        
+
         if ($data = $this->_getMinMaxValues($rp->id)) {
             return $data['min'];
         }
@@ -709,9 +712,9 @@ SQL
                     ->one();
 
                 if ($value && isset($value['value_enum'])) {
-                    $value = (float) $value['value_enum'];
+                    $value = (float)$value['value_enum'];
                 }
-                
+
 
                 /*if ($this->enableCache) {
                     \Yii::$app->cache->set($cacheKey, $value);
@@ -920,6 +923,101 @@ SQL
     public function getRPByCode($name)
     {
         return ArrayHelper::getValue($this->_rps, $name);
+    }
+
+
+    public function load($data, $formName = null)
+    {
+        /*print_r($data);
+                print_r($this->formName());die;*/
+
+        return parent::load($data, $formName);
+    }
+
+    public function loadFromaSavedFilter(CmsSavedFilter $cmsSavedFilter)
+    {
+        $propertyName = $this->getAttributeName($cmsSavedFilter->cms_content_property_id);
+        if ($cmsSavedFilter->value_content_property_enum_id) {
+            $this->{$propertyName} = [$cmsSavedFilter->value_content_property_enum_id];
+        } else {
+            $this->{$propertyName} = [$cmsSavedFilter->value_content_element_id];
+        }
+
+    }
+
+    /**
+     * @return null|CmsSavedFilter
+     */
+    public function getSavedFilter()
+    {
+        $data = $this->toArray();
+        ArrayHelper::remove($data, "baseQuery");
+
+        $cmsSavedFilter = null;
+        if ($data) {
+            $counterValue = 0;
+            $value_id = "";
+            $key_id = "";
+            foreach ($data as $key => $value) {
+                if ($value) {
+
+                    if (is_array($value)) {
+                        if (count($value) == 1) {
+                            $value_id = $value[0];
+                            $key_id = $key;
+                        }
+                        $counterValue = $counterValue + count($value);
+                    } else {
+                        $counterValue = $counterValue + 1;
+                        $value_id = $value;
+                        $key_id = $key;
+                    }
+                }
+            }
+
+            $value_id = (int)trim($value_id);
+            if ($counterValue == 1 && $value_id) {
+                //Выбрано одно значение
+
+                $propertyCode = substr($key_id, 1, strlen($key_id));
+                /**
+                 * @var CmsContentProperty $property
+                 */
+                $property = CmsContentProperty::findOne($propertyCode);
+                $qSavedFilter = CmsSavedFilter::find()->cmsSite()
+                    ->andWhere([
+                        'cms_tree_id' => \Yii::$app->cms->currentTree->id,
+                    ]);
+
+                if ($property->property_type == PropertyType::CODE_ELEMENT) {
+                    $qSavedFilter->andWhere([
+                        'value_content_element_id' => $value_id,
+                    ]);
+                } elseif ($property->property_type == PropertyType::CODE_LIST) {
+                    $qSavedFilter->andWhere([
+                        'value_content_property_enum_id' => $value_id,
+                    ]);
+                }
+                $cmsSavedFilter = $qSavedFilter->one();
+                if (!$cmsSavedFilter) {
+                    $cmsSavedFilter = new CmsSavedFilter();
+                    $cmsSavedFilter->cms_tree_id = \Yii::$app->cms->currentTree->id;
+                    $cmsSavedFilter->cms_content_property_id = $property->id;
+
+                    if ($property->property_type == PropertyType::CODE_ELEMENT) {
+                        $cmsSavedFilter->value_content_element_id = $value_id;
+                    } elseif ($property->property_type == PropertyType::CODE_LIST) {
+                        $cmsSavedFilter->value_content_property_enum_id = $value_id;
+                    }
+
+                    if (!$cmsSavedFilter->save()) {
+                        $cmsSavedFilter = null;
+                    }
+                }
+            }
+        }
+
+        return $cmsSavedFilter;
     }
 
 }

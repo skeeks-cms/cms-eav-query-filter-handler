@@ -934,7 +934,7 @@ SQL
         return parent::load($data, $formName);
     }
 
-    public function loadFromaSavedFilter(CmsSavedFilter $cmsSavedFilter)
+    public function loadFromSavedFilter(CmsSavedFilter $cmsSavedFilter)
     {
         $propertyName = $this->getAttributeName($cmsSavedFilter->cms_content_property_id);
         if ($cmsSavedFilter->value_content_property_enum_id) {

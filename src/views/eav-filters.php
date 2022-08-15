@@ -143,7 +143,7 @@ JS
         : ?>
 
         <? if ($options = $handler->getOprionsByRp($rp)) : ?>
-            <? if (count($options) > 1) : ?>
+            <? if (count($options) > 0) : ?>
 
                 <?
                 $code = $handler->getAttributeName($rp->id);

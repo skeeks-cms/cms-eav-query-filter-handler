@@ -64,7 +64,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
      */
     public function formName()
     {
-        return 'eav';
+        return 'e';
     }
 
     /**
@@ -733,7 +733,7 @@ SQL
      */
     public function getAttributeNameRangeFrom($rp_id)
     {
-        return $this->getAttributeName($rp_id).$this->_prefixRange."From";
+        return $this->getAttributeName($rp_id).$this->_prefixRange."f";
     }
     /**
      * @param $propertyCode
@@ -741,12 +741,100 @@ SQL
      */
     public function getAttributeNameRangeTo($rp_id)
     {
-        return $this->getAttributeName($rp_id).$this->_prefixRange."To";
+        return $this->getAttributeName($rp_id).$this->_prefixRange."t";
     }
 
     public function getAttributeName($rp_id)
     {
         return 'f'.$rp_id;
+    }
+
+    protected $_applied = [];
+    protected $_appliedResult = null;
+
+    /**
+     * @return array
+     */
+    public function getApplied()
+    {
+        $result = [];
+
+        if ($this->_appliedResult !== null) {
+            return (array) $this->_appliedResult;
+        }
+
+        foreach ($this->_applied as $key => $data)
+        {
+            $rowData = [];
+
+            $type = ArrayHelper::getValue($data, "type");
+            $property = ArrayHelper::getValue($data, "property");
+            $value = ArrayHelper::getValue($data, "value");
+            $fromValue = ArrayHelper::getValue($data, "fromValue");
+            $toValue = ArrayHelper::getValue($data, "toValue");
+
+            /**
+             * @var CmsContentProperty $property
+             */
+            if ($type == 'number') {
+                $name = $property->name;
+                if ($fromValue) {
+                    $name .= " от {$fromValue}";
+                }
+                if ($toValue) {
+                    $name .= " до {$toValue}";
+                }
+                if ($property->cms_measure_code) {
+                    $name .= " {$property->cmsMeasure->symbol}";
+                }
+                $rowData = [
+                    'name' => $name,
+                    'type' => $type,
+                    'property' => $property,
+                    'fromValue' => $fromValue,
+                    'toValue' => $toValue,
+                ];
+                $result[] = $rowData;
+            } else {
+
+                if (in_array($property->property_type, [
+                    \skeeks\cms\relatedProperties\PropertyType::CODE_LIST
+                ])) {
+                    if (is_array($value)) {
+                        foreach ($value as $val)
+                        {
+                            $enum = CmsContentPropertyEnum::findOne($val);
+                            $rowData = [
+                                'name' => $enum->value_for_saved_filter ? $enum->value_for_saved_filter : $enum->value,
+                                'type' => $type,
+                                'property' => $property,
+                                'value' => $val,
+                            ];
+                            $result[] = $rowData;
+                        }
+                    }
+                } else if (in_array($property->property_type, [
+                    \skeeks\cms\relatedProperties\PropertyType::CODE_ELEMENT
+                ])) {
+                    if (is_array($value)) {
+                        foreach ($value as $val)
+                        {
+                            $element = CmsContentElement::findOne($val);
+                            $rowData = [
+                                'name' => $element->name,
+                                'type' => $type,
+                                'property' => $property,
+                                'value' => $val,
+                            ];
+                            $result[] = $rowData;
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->_appliedResult = $result;
+        return $result;
     }
 
     public function applyToQuery(QueryInterface $activeQuery)
@@ -785,6 +873,13 @@ SQL
                     if (!$fromValue && !$toValue) {
                         continue;
                     }
+
+                    $this->_applied[$code] = [
+                        'property'  => $property,
+                        'type'      => "number",
+                        'fromValue' => $fromValue,
+                        'toValue'   => $toValue,
+                    ];
 
                     $unionQueries[] = $query;
                     //$elementIds = $query->all();
@@ -835,6 +930,14 @@ SQL
                                 //print_r($query->createCommand()->rawSql);die;
                                 //$elementIds = $query->indexBy('element_id')->all();
                                 $unionQueries[] = $query;
+
+
+                                $this->_applied[$code] = [
+                                    'property' => $property,
+                                    'type'     => "options",
+                                    'value'    => $value,
+                                ];
+
                             } else {
                                 $query = $classSearch::find()->select(['element_id as id'])->where([
                                     "value"       => $value,
@@ -958,6 +1061,7 @@ SQL
             $counterValue = 0;
             $value_id = "";
             $key_id = "";
+
             foreach ($data as $key => $value) {
                 if ($value) {
 

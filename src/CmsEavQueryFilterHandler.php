@@ -46,7 +46,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
     /**
      * @var
      */
-    public $elementIds;
+    public $_elementIds = null;
 
     /**
      * @var array
@@ -137,6 +137,43 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
             ->orderBy([\skeeks\cms\models\CmsContentProperty::tableName().'.priority' => SORT_ASC]);
     }
 
+    public function getElementIds()
+    {
+        if ($this->_elementIds === null) {
+            $this->_baseQuery->with = [];
+            $this->_baseQuery->select(['cms_content_element.id as id']);
+
+            $this->_elementIds = [];
+
+            if ($ids = $this->_baseQuery->column()) {
+                if ($ids) {
+                    $string_ids = implode(",", $ids);
+                    $child_ids = CmsContentElement::find()->select(['id'])->where(new Expression("parent_content_element_id in ({$string_ids})"))->column();
+                    if ($child_ids) {
+                        $ids = array_merge($ids, $child_ids);
+                    }
+
+                    $ids = implode(",", $ids);
+                    $this->_elementIds = CmsContentElement::find()
+                        ->andWhere(new Expression("id in ({$ids})"))
+                        ->select(['id']);
+
+                }
+            }
+        }
+
+        return $this->_elementIds;
+    }
+
+    /**
+     * @param $data
+     * @return $this
+     */
+    public function setElementIds($data = [])
+    {
+        $this->_elementIds = $data;
+        return $this;
+    }
     /**
      * @param $query
      * @return $this
@@ -152,33 +189,7 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
          * @var $query \yii\db\ActiveQuery
          */
         $query = clone $this->baseQuery;
-        $query->with = [];
-        $query->select(['cms_content_element.id as id']);
-
-        /*$ids = $query->asArray()->all();
-        $this->elementIds = array_keys($ids);*/
-        $this->elementIds = [];
-        if ($ids = $query->column()) {
-            if ($ids) {
-                $string_ids = implode(",", $ids);
-                $child_ids = CmsContentElement::find()->select(['id'])->where(new Expression("parent_content_element_id in ({$string_ids})"))->column();
-                if ($child_ids) {
-                    $ids = array_merge($ids, $child_ids);
-                }
-
-                $ids = implode(",", $ids);
-                $this->elementIds = CmsContentElement::find()
-                    ->andWhere(new Expression("id in ({$ids})"))
-                    ->select(['id']);
-
-            } else {
-                $this->elementIds = [];
-            }
-
-
-            //$this->elementIds = $ids;
-        }
-
+        $this->setBaseQuery($query);
 
         return $this;
     }
@@ -749,6 +760,18 @@ SQL
         return 'f'.$rp_id;
     }
 
+    /**
+     *
+     * Получить id свойства cms по названию
+     *
+     * @param $name
+     * @return int
+     */
+    public function getAttributePropertyId($name)
+    {
+        return (int) str_replace("f", "", $name);
+    }
+
     protected $_applied = [];
     protected $_appliedResult = null;
 
@@ -1028,13 +1051,46 @@ SQL
         return ArrayHelper::getValue($this->_rps, $name);
     }
 
+    public function _createAttributes($data = [])
+    {
+        foreach ($data as $code => $value)
+        {
+            //$propertyId = strre
+            if ($propertyId = $this->getAttributePropertyId($code)) {
+                $rp = \skeeks\cms\models\CmsContentProperty::find()
+                    ->cmsSite()
+                    ->andWhere(['id' => $propertyId])
+                    ->one();
 
+                $this->_rpInit($rp);
+            }
+        }
+    }
+
+    /**
+     * Если надо то создаем атрибуты находу
+     *
+     * @param $data
+     * @param $formName
+     * @return bool
+     */
     public function load($data, $formName = null)
     {
-        /*print_r($data);
-                print_r($this->formName());die;*/
+        $scope = $formName === null ? $this->formName() : $formName;
 
-        return parent::load($data, $formName);
+        if ($scope === '' && !empty($data)) {
+            $this->_createAttributes($data);
+            $this->setAttributes($data);
+
+            return true;
+        } elseif (isset($data[$scope])) {
+            $this->_createAttributes($data[$scope]);
+            $this->setAttributes($data[$scope]);
+
+            return true;
+        }
+
+        return false;
     }
 
     public function loadFromSavedFilter(CmsSavedFilter $cmsSavedFilter)

@@ -1097,9 +1097,13 @@ SQL
     {
         $propertyName = $this->getAttributeName($cmsSavedFilter->cms_content_property_id);
         if ($cmsSavedFilter->value_content_property_enum_id) {
-            $this->{$propertyName} = [$cmsSavedFilter->value_content_property_enum_id];
+            if (isset($this->{$propertyName})) {
+                $this->{$propertyName} = [$cmsSavedFilter->value_content_property_enum_id];
+            }
         } else {
-            $this->{$propertyName} = [$cmsSavedFilter->value_content_element_id];
+            if (isset($this->{$propertyName})) {
+                $this->{$propertyName} = [$cmsSavedFilter->value_content_element_id];
+            }
         }
 
     }

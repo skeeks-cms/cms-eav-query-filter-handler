@@ -60,6 +60,11 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
     protected $_rps = [];
 
     /**
+     * @var bool Искать среди дочерних элементов?
+     */
+    public $isChildren = true;
+
+    /**
      * @return string
      */
     public function formName()
@@ -148,10 +153,13 @@ class CmsEavQueryFilterHandler extends DynamicModel implements IQueryFilterHandl
             if ($ids = $this->_baseQuery->column()) {
                 if ($ids) {
                     $string_ids = implode(",", $ids);
-                    $child_ids = CmsContentElement::find()->select(['id'])->where(new Expression("parent_content_element_id in ({$string_ids})"))->column();
-                    if ($child_ids) {
-                        $ids = array_merge($ids, $child_ids);
+                    if ($this->isChildren) {
+                        $child_ids = CmsContentElement::find()->select(['id'])->where(new Expression("parent_content_element_id in ({$string_ids})"))->column();
+                        if ($child_ids) {
+                            $ids = array_merge($ids, $child_ids);
+                        }
                     }
+                    
 
                     $ids = implode(",", $ids);
                     $this->_elementIds = CmsContentElement::find()
@@ -1012,12 +1020,19 @@ SQL
 
     protected function _applyToQuery(ActiveQuery $activeQuery, $unionQuery)
     {
-        $activeQuery->joinWith("childrenContentElements as childrenContentElements");
-        $activeQuery->andWhere([
-            'or',
-            ['in', CmsContentElement::tableName().'.id', $unionQuery],
-            ['in', 'childrenContentElements.id', $unionQuery],
-        ]);
+        if ($this->isChildren === true) {
+            $activeQuery->joinWith("childrenContentElements as childrenContentElements");
+            $activeQuery->andWhere([
+                'or',
+                ['in', CmsContentElement::tableName().'.id', $unionQuery],
+                ['in', 'childrenContentElements.id', $unionQuery],
+            ]);
+        } else {
+            $activeQuery->andWhere(
+                ['in', CmsContentElement::tableName().'.id', $unionQuery],
+            );
+        }
+        
     }
 
     /**

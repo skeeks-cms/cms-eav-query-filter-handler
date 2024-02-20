@@ -821,6 +821,7 @@ SQL
                 $rowData = [
                     'name' => $name,
                     'type' => $type,
+                    'property_id'  => "field-e-f" . $property->id,
                     'property' => $property,
                     'fromValue' => $fromValue,
                     'toValue' => $toValue,
@@ -839,6 +840,7 @@ SQL
                                 'name' => $enum->value_for_saved_filter ? $enum->value_for_saved_filter : $enum->value,
                                 'type' => $type,
                                 'property' => $property,
+                                'property_id'  => "field-e-f" . $property->id,
                                 'value' => $val,
                             ];
                             $result[] = $rowData;
@@ -855,6 +857,7 @@ SQL
                                 'name' => $element->name,
                                 'type' => $type,
                                 'property' => $property,
+                                'property_id'  => "field-e-f" . $property->id,
                                 'value' => $val,
                             ];
                             $result[] = $rowData;

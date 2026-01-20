@@ -1158,6 +1158,7 @@ SQL
             }
 
             $value_id = (int)trim($value_id);
+
             if ($counterValue == 1 && $value_id) {
                 //Выбрано одно значение
 
@@ -1179,6 +1180,8 @@ SQL
                     $qSavedFilter->andWhere([
                         'value_content_property_enum_id' => $value_id,
                     ]);
+                } else {
+                    return null;
                 }
                 $cmsSavedFilter = $qSavedFilter->one();
                 if (!$cmsSavedFilter) {
